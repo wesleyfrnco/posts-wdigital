@@ -1,0 +1,52 @@
+# .github/workflows/render-carousel.yml
+# Acionado pelo Make (Cenário A) via repository_dispatch.
+# Renderiza os slides em JPEG, comita em /posts/<id>/ e o Pages serve as URLs.
+
+name: render-carousel
+
+on:
+  repository_dispatch:
+    types: [render-carousel]
+
+# permite o job commitar de volta no repo
+permissions:
+  contents: write
+
+concurrency:
+  group: render-carousel
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar Puppeteer
+        working-directory: render
+        run: npm install puppeteer@22 --no-save
+
+      - name: Renderizar JPEGs
+        working-directory: render
+        env:
+          # o Make manda o objeto {"posts":[...]} dentro de client_payload
+          PAYLOAD: ${{ toJson(github.event.client_payload) }}
+        run: node render.js
+
+      - name: Commitar imagens
+        run: |
+          git config user.name  "wdigital-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add posts/
+          if git diff --cached --quiet; then
+            echo "Nada para commitar."
+          else
+            git commit -m "render: carrosséis $(date -u +%Y-%m-%dT%H:%MZ)"
+            git push
+          fi
