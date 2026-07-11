@@ -16,6 +16,8 @@ const puppeteer = require('puppeteer');
 
 const OUT_ROOT = path.join(__dirname, '..', 'posts'); // repo/posts/<id>/slide-k.jpg
 const RENDER_HTML = 'file://' + path.join(__dirname, 'render.html');
+// base pública do GitHub Pages (sem barra no fim). Pode sobrescrever via env PAGES_BASE.
+const PAGES_BASE = (process.env.PAGES_BASE || 'https://wesleyfrnco.github.io/posts-wdigital').replace(/\/+$/, '');
 const W = 1080, H = 1350;
 const JPEG_QUALITY = 90;
 
@@ -61,9 +63,11 @@ async function renderPost(browser, post) {
   for (let i = 0; i < handles.length; i++) {
     const file = path.join(dir, `slide-${i + 1}.jpg`);
     await handles[i].screenshot({ path: file, type: 'jpeg', quality: JPEG_QUALITY });
-    urls.push(`posts/${post.id}/slide-${i + 1}.jpg`);
+    urls.push(`${PAGES_BASE}/posts/${post.id}/slide-${i + 1}.jpg`);
     console.log('  ->', file);
   }
+  // urls.json com as URLs públicas prontas — o Cenário B lê isto e itera.
+  fs.writeFileSync(path.join(dir, 'urls.json'), JSON.stringify(urls));
   await page.close();
   return urls;
 }
